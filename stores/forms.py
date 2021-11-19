@@ -2,6 +2,7 @@ from django import forms
 from django.core.exceptions import ValidationError
 from django.shortcuts import get_object_or_404
 from django.forms import fields
+from django.core.cache import cache
 
 from .models import Addresses, CartItems
 
@@ -39,5 +40,10 @@ class AddressInputForm(forms.ModelForm):
     def save(self):
         address = super().save(commit=False)
         address.user = self.user
-        address.save()
+        try:
+            address.validate_unique()
+            address.save()
+        except ValidationError as e:
+            pass
+        cache.set(f'address_user_{self.user.id}', address)
         return address
