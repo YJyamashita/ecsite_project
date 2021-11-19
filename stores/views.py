@@ -1,7 +1,4 @@
-from django.db.models import query
-from django.http import request, response
 from django.shortcuts import render, get_object_or_404
-from django.views.generic.base import TemplateView
 from django.views.generic.list import ListView
 from django.views.generic.detail import DetailView
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -16,10 +13,7 @@ from django.core.cache import cache
 
 import os
 from .models import(
-    Addresses,
-    Carts,
-    Products,
-    CartItems,
+    Addresses, Products, Carts, CartItems
 )
 from .forms import(
     CartUpdateForm, AddressInputForm,
@@ -53,8 +47,7 @@ class ProductListView(LoginRequiredMixin, ListView):
         context = super().get_context_data(**kwargs)
         context['product_type_name'] = self.request.GET.get(
             'product_type_name', '')
-        context['product_name'] = self.request.GET.get(
-            'product_name', '')
+        context['product_name'] = self.request.GET.get('product_name', '')
         order_by_price = self.request.GET.get('order_by_price', 0)
         if order_by_price == '1':
             context['ascending'] = True
@@ -87,7 +80,7 @@ def add_product(request):
             response.status_code = 403
             return response
         if int(quantity) <= 0:
-            response = JsonResponse({'message': 'oより大きい値を入力して下さい'})
+            response = JsonResponse({'message': '0より大きい値を入力してください'})
             response.status_code = 403
             return response
         cart = Carts.objects.get_or_create(
@@ -98,7 +91,7 @@ def add_product(request):
                 quantity=quantity, product_id=product_id,
                 cart=cart[0]
             )
-            return JsonResponse({'message': '商品をカートに追加'})
+            return JsonResponse({'message': '商品をカートに追加しました'})
 
 
 class CartItemsView(LoginRequiredMixin, TemplateView):
@@ -160,12 +153,11 @@ class InputAddressView(LoginRequiredMixin, CreateView):
         address = get_object_or_404(
             Addresses, user_id=self.request.user.id, pk=pk) if pk else address
         if address:
-            context['form'].fields['zip_code'].initital = address.zip_code
-            context['form'].fields['prefecture'].initital = address.prefecture
-            context['form'].fields['address'].initital = address.address
+            context['form'].fields['zip_code'].initial = address.zip_code
+            context['form'].fields['prefecture'].initial = address.prefecture
+            context['form'].fields['address'].initial = address.address
         context['addresses'] = Addresses.objects.filter(
             user=self.request.user).all()
-
         return context
 
     def form_valid(self, form):

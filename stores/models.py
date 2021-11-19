@@ -1,3 +1,4 @@
+from django.contrib.auth.models import User
 from django.db import models
 from accounts.models import Users
 
@@ -104,3 +105,40 @@ class Addresses(models.Model):
 
     def __str__(self):
         return f'{self.zip_code} {self.prefecture} {self.address}'
+
+
+class Orders(models.Model):
+    total_price = models.PositiveBigIntegerField()
+    address = models.ForeignKey(
+        Addresses,
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+    )
+    user = models.ForeignKey(
+        Users,
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+    )
+
+    class Meta:
+        db_table = 'orders'
+
+
+class OrderItems(models.Model):
+    quantity = models.PositiveIntegerField()
+    product = models.ForeignKey(
+        Products,
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+    )
+    order = models.ForeignKey(
+        Orders,
+        on_delete=models.CASCADE
+    )
+
+    class Meta:
+        db_table = 'order_items'
+        unique_together = [['product', 'order']]
