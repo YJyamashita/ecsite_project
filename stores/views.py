@@ -1,4 +1,4 @@
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import redirect, render, get_object_or_404
 from django.views.generic.list import ListView
 from django.views.generic.detail import DetailView
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -13,7 +13,7 @@ from django.core.cache import cache
 
 import os
 from .models import(
-    Addresses, Products, Carts, CartItems
+    Addresses, Products, Carts, CartItems, Orders, OrderItems,
 )
 from .forms import(
     CartUpdateForm, AddressInputForm,
@@ -163,3 +163,47 @@ class InputAddressView(LoginRequiredMixin, CreateView):
     def form_valid(self, form):
         form.user = self.request.user
         return super().form_valid(form)
+
+
+class ConfirmOrderView(LoginRequiredMixin, TemplateView):
+    template_name = os.path.join('stores', 'confirm_order.html')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        address = cache.get(f'address_user_{self.request.user.id}')
+        context['address'] = address
+        cart = get_object_or_404(Carts, user_id=self.request.user.id)
+        context['cart'] = cart
+        total_price = 0
+        items = []
+        for item in cart.cartitems_set.all():
+            total_price += item.quantity * item.product.price
+            picture = item.product.productpictures_set.first()
+            picture = picture.picture if picture else None
+            tmp_item = {
+                'quantity': item.quantity,
+                'picture': picture,
+                'name': item.product.name,
+                'price': item.product.price,
+                'id': item.id,
+            }
+            items.append(tmp_item)
+        context['total_price'] = total_price
+        context['items'] = items
+        return context
+
+    def post(self, request, *args, **kwargs):
+        context = self.get_context_data()
+        address = context.get('address')
+        cart = context['cart']
+        total_price = context.get('total_price')
+        if (not address) or (not cart) or (not total_price):
+            raise Http404('注文処理でエラーが発生しました')
+        for item in cart.cartitems_set.all():
+            if item.quantity > item.produt.stock:
+                raise Http404('注文処理でエラーが発生しました')
+        order = Orders.objects.insert_cart(cart, address, total_price)
+        OrderItems.objects.insert_cart_items(cart, order)
+        Products.objects.reduce_stock(cart)
+        cart.delete()
+        return redirect(reverse_lazy('stores:order_success'))
