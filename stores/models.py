@@ -1,4 +1,3 @@
-from django.contrib.auth.models import User
 from django.db import models
 from accounts.models import Users
 
@@ -29,7 +28,7 @@ class ProductsManager(models.Manager):
         for item in cart.cartitems_set.all():
             update_stock = item.product.stock - item.quantity
             item.product.stock = update_stock
-            item.save()
+            item.product.save()
 
 
 class Products(models.Model):
@@ -78,6 +77,7 @@ class Carts(models.Model):
 
 
 class CartItemsManager(models.Manager):
+
     def save_item(self, product_id, quantity, cart):
         c = self.model(quantity=quantity, product_id=product_id, cart=cart)
         c.save()
@@ -128,7 +128,7 @@ class OrdersManager(models.Manager):
 
 
 class Orders(models.Model):
-    total_price = models.PositiveBigIntegerField()
+    total_price = models.PositiveIntegerField()
     address = models.ForeignKey(
         Addresses,
         on_delete=models.SET_NULL,
@@ -167,8 +167,7 @@ class OrderItems(models.Model):
         null=True,
     )
     order = models.ForeignKey(
-        Orders,
-        on_delete=models.CASCADE
+        Orders, on_delete=models.CASCADE
     )
     objects = OrderItemsManager()
 
